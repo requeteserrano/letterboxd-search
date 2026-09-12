@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Letterboxd Advanced Search Builder</title>
+
+  <style>
+    :root {
+      --bg: #14181c;
+      --panel: #1d2328;
+      --panel-light: #273038;
+      --input: #111519;
+      --text: #f2f4f5;
+      --muted: #aab4bc;
+      --border: #3a444c;
+      --green: #00c030;
+      --green-dark: #009b27;
+      --red: #ed6464;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, #263c2d 0, transparent 35rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    .app {
+      width: min(100% - 2rem, 1050px);
+      margin: 0 auto;
+      padding: 3rem 0;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      margin: 0 0 .5rem;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: -.06em;
+    }
+
+    header p {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card {
+      margin-bottom: 1rem;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(29, 35, 40, .96);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .18);
+    }
+
+    .card h2 {
+      margin: 0 0 .4rem;
+      font-size: 1.2rem;
+    }
+
+    .description {
+      margin: 0 0 1rem;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.5;
+    }
+
+    .filter-list {
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: 180px 130px minmax(0, 1fr) 42px;
+      gap: .55rem;
+      align-items: center;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: .7rem .75rem;
+      outline: none;
+      background: var(--input);
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 2px rgba(0, 192, 48, .18);
+    }
+
+    button,
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      border: 0;
+      border-radius: 7px;
+      padding: .7rem 1rem;
+      cursor: pointer;
+      color: #fff;
+      background: var(--green-dark);
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    button:hover,
+    .button-link:hover {
+      background: var(--green);
+    }
+
+    button.secondary {
+      background: var(--panel-light);
+    }
+
+    button.secondary:hover {
+      background: #35414a;
+    }
+
+    button.remove {
+      min-height: 38px;
+      padding: .4rem;
+      background: transparent;
+      color: var(--red);
+      font-size: 1.2rem;
+    }
+
+    button.remove:hover {
+      background: rgba(237, 100, 100, .12);
+    }
+
+    .add-button {
+      margin-top: .9rem;
+    }
+
+    .empty-message {
+      padding: .8rem;
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .query-box {
+      position: relative;
+    }
+
+    #queryOutput {
+      min-height: 100px;
+      padding-right: 5rem;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      line-height: 1.55;
+    }
+
+    .copy-button {
+      position: absolute;
+      top: .65rem;
+      right: .65rem;
+      min-height: 34px;
+      padding: .45rem .7rem;
+      font-size: .8rem;
+    }
+
+    .url-preview {
+      margin-top: .9rem;
+      padding: .75rem;
+      overflow-wrap: anywhere;
+      border-radius: 6px;
+      background: var(--input);
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .8rem;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .65rem;
+      margin-top: 1rem;
+    }
+
+    .status {
+      min-height: 1.2em;
+      margin-top: .65rem;
+      color: var(--green);
+      font-size: .85rem;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: .8rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 720px) {
+      .filter-row {
+        grid-template-columns: 1fr 1fr 42px;
+      }
+
+      .filter-row input {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        padding: 2rem 0;
+      }
+
+      .filter-row {
+        grid-template-columns: 1fr 42px;
+      }
+
+      .filter-row select:first-child {
+        grid-column: 1;
+      }
+
+      .filter-row select:nth-child(2) {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .filter-row input {
+        grid-column: 1;
+        grid-row: 3;
+      }
+
+      .filter-row button {
+        grid-column: 2;
+        grid-row: 1 / 4;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header>
+      <h1>Advanced Search</h1>
+      <p>
+        Add individual filters and choose whether each one should be included
+        or excluded. This allows combinations such as included actors,
+        excluded actors, included genres, and excluded genres.
+      </p>
+    </header>
+
+    <section class="card">
+      <h2>Filters</h2>
+      <p class="description">
+        Each row becomes one Letterboxd filter. Add multiple rows with the same
+        field when you want to include or exclude different values.
+      </p>
+
+      <div id="filterList" class="filter-list"></div>
+
+      <button class="add-button" id="addFilterButton" type="button">
+        + Add filter
+      </button>
+    </section>
+
+    <section class="card">
+      <h2>Raw search terms</h2>
+
+      <textarea
+        id="rawTerms"
+        placeholder="Optional terms, for example: black-and-white"
+      ></textarea>
+
+      <p class="hint">
+        Raw terms are appended to the generated Letterboxd search.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Generated query</h2>
+
+      <div class="query-box">
+        <textarea id="queryOutput" readonly spellcheck="false"></textarea>
+
+        <button class="copy-button secondary" id="copyButton" type="button">
+          Copy
+        </button>
+      </div>
+
+      <div class="url-preview" id="urlPreview"></div>
+
+      <div class="actions">
+        <a
+          class="button-link"
+          id="openButton"
+          href="https://letterboxd.com/search/"
+          target="_blank"
+          rel="noopener"
+        >
+          Open in Letterboxd
+        </a>
+
+        <button class="secondary" id="resetButton" type="button">
+          Reset
+        </button>
+      </div>
+
+      <div class="status" id="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    const filterTypes = [
+      ["director", "Director"],
+      ["actor", "Actor"],
+      ["producer", "Producer"],
+      ["writer", "Writer"],
+      ["cinematography", "Cinematographer"],
+      ["composer", "Composer"],
+      ["editor", "Editor"],
+      ["genre", "Genre"],
+      ["country", "Country"],
+      ["studio", "Studio"],
+      ["service", "Streaming service"],
+      ["keyword", "Keyword"],
+      ["year", "Year"],
+      ["runtime", "Runtime"],
+      ["rating", "Minimum rating"],
+      ["popularity", "Minimum popularity"]
+    ];
+
+    const filterList = document.querySelector("#filterList");
+    const rawTerms = document.querySelector("#rawTerms");
+    const queryOutput = document.querySelector("#queryOutput");
+    const urlPreview = document.querySelector("#urlPreview");
+    const openButton = document.querySelector("#openButton");
+    const status = document.querySelector("#status");
+
+    function createFilterRow(
+      field = "actor",
+      mode = "include",
+      value = ""
+    ) {
+      const row = document.createElement("div");
+      row.className = "filter-row";
+
+      const fieldSelect = document.createElement("select");
+      fieldSelect.className = "filter-field";
+      fieldSelect.setAttribute("aria-label", "Filter field");
+
+      for (const [key, label] of filterTypes) {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = label;
+
+        if (key === field) {
+          option.selected = true;
+        }
+
+        fieldSelect.appendChild(option);
+      }
+
+      const modeSelect = document.createElement("select");
+      modeSelect.className = "filter-mode";
+      modeSelect.setAttribute("aria-label", "Include or exclude");
+
+      modeSelect.innerHTML = `
+        <option value="include">Include</option>
+        <option value="exclude">Exclude</option>
+      `;
+
+      modeSelect.value = mode;
+
+      const valueInput = document.createElement("input");
+      valueInput.className = "filter-value";
+      valueInput.type = "text";
+      valueInput.placeholder = "Enter a value";
+      valueInput.value = value;
+      valueInput.setAttribute("aria-label", "Filter value");
+
+      const removeButton = document.createElement("button");
+      removeButton.className = "remove";
+      removeButton.type = "button";
+      removeButton.title = "Remove filter";
+      removeButton.setAttribute("aria-label", "Remove filter");
+      removeButton.textContent = "×";
+
+      fieldSelect.addEventListener("change", update);
+      modeSelect.addEventListener("change", update);
+      valueInput.addEventListener("input", update);
+
+      removeButton.addEventListener("click", () => {
+        row.remove();
+        updateEmptyMessage();
+        update();
+      });
+
+      row.appendChild(fieldSelect);
+      row.appendChild(modeSelect);
+      row.appendChild(valueInput);
+      row.appendChild(removeButton);
+
+      filterList.appendChild(row);
+      updateEmptyMessage();
+      update();
+    }
+
+    function updateEmptyMessage() {
+      const rows = filterList.querySelectorAll(".filter-row");
+      const existingMessage = filterList.querySelector(".empty-message");
+
+      if (rows.length === 0 && !existingMessage) {
+        const message = document.createElement("div");
+        message.className = "empty-message";
+        message.textContent = "No filters added yet.";
+        filterList.appendChild(message);
+      }
+
+      if (rows.length > 0 && existingMessage) {
+        existingMessage.remove();
+      }
+    }
+
+    function normalizeValue(value) {
+      return value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+    }
+
+    function buildQuery() {
+      const parts = [];
+
+      document.querySelectorAll(".filter-row").forEach(row => {
+        const field = row.querySelector(".filter-field").value;
+        const mode = row.querySelector(".filter-mode").value;
+        const value = row.querySelector(".filter-value").value.trim();
+
+        if (!value) {
+          return;
+        }
+
+        const prefix = mode === "exclude" ? "-" : "";
+        const normalized = normalizeValue(value);
+
+        parts.push(`${prefix}${field}:${normalized}`);
+      });
+
+      const raw = rawTerms.value.trim();
+
+      if (raw) {
+        parts.push(normalizeValue(raw));
+      }
+
+      return parts.join("+");
+    }
+
+    function update() {
+      const query = buildQuery();
+
+      const url = query
+        ? `https://letterboxd.com/search/${query}/`
+        : "https://letterboxd.com/search/";
+
+      queryOutput.value = query;
+      urlPreview.textContent = url;
+      openButton.href = url;
+    }
+
+    async function copyQuery() {
+      const query = queryOutput.value;
+
+      if (!query) {
+        status.textContent = "There is no query to copy.";
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(query);
+      } catch {
+        queryOutput.select();
+        document.execCommand("copy");
+      }
+
+      status.textContent = "Query copied.";
+
+      setTimeout(() => {
+        status.textContent = "";
+      }, 1800);
+    }
+
+    function resetSearch() {
+      filterList.innerHTML = "";
+      rawTerms.value = "";
+
+      createFilterRow("actor", "include", "");
+
+      status.textContent = "Search reset.";
+
+      setTimeout(() => {
+        status.textContent = "";
+      }, 1800);
+    }
+
+    document.querySelector("#addFilterButton").addEventListener("click", () => {
+      createFilterRow();
+    });
+
+    document.querySelector("#copyButton").addEventListener("click", copyQuery);
+    document.querySelector("#resetButton").addEventListener("click", resetSearch);
+    rawTerms.addEventListener("input", update);
+
+    createFilterRow("actor", "include", "");
+    update();
+  </script>
+</body>
+</html>
